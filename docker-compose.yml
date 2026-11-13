@@ -1,0 +1,68 @@
+# `docker compose up -d`                 → infra only (Postgres + Redis) for local dev
+# `docker compose --profile app up -d --build` → full stack (migrate, api, worker)
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ingest
+      POSTGRES_PASSWORD: ingest
+      POSTGRES_DB: ingest
+    ports: ["5433:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./docker/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ingest"]
+      interval: 2s
+      retries: 30
+
+  redis:
+    image: redis:7-alpine
+    # BullMQ must never have its keys evicted.
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory-policy", "noeviction"]
+    ports: ["6380:6379"]
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 2s
+      retries: 30
+
+  migrate:
+    profiles: [app]
+    build: .
+    command: ["npm", "run", "migrate"]
+    environment: &appenv
+      DATABASE_URL: postgres://ingest:ingest@postgres:5432/ingest
+      REDIS_URL: redis://redis:6379
+      LOG_LEVEL: info
+      CHAOS_SOURCE_ENABLED: "true"
+    depends_on:
+      postgres: { condition: service_healthy }
+
+  api:
+    profiles: [app]
+    build: .
+    command: ["npm", "run", "api"]
+    environment:
+      <<: *appenv
+      SERVICE_NAME: api
+    ports: ["3000:3000"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+  worker:
+    profiles: [app]
+    build: .
+    command: ["npm", "run", "worker"]
+    environment:
+      <<: *appenv
+      SERVICE_NAME: worker
+    ports: ["9100:9100"]
+    depends_on:
+      migrate: { condition: service_completed_successfully }
+      redis: { condition: service_healthy }
+
+volumes:
+  pgdata:
+  redisdata:

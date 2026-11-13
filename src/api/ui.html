@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HN Jobs</title>
+<style>
+  :root {
+    --bg: #f7f7f5; --panel: #fff; --text: #1d1d1b; --muted: #6b6b66; --line: #e4e4df;
+    --accent: #c2410c; --chip: #f1efe9; --ok: #15803d; --warn: #a16207;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #151514; --panel: #1e1e1c; --text: #ecebe6; --muted: #9b9a93; --line: #33332f;
+            --accent: #fb923c; --chip: #2a2a27; --ok: #4ade80; --warn: #facc15; }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text);
+         font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  header { padding: 20px 16px 8px; max-width: 1100px; margin: 0 auto; }
+  h1 { margin: 0 0 4px; font-size: 20px; }
+  .stats { color: var(--muted); font-size: 13px; }
+  form { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 12px 16px;
+         max-width: 1100px; margin: 0 auto; position: sticky; top: 0; background: var(--bg);
+         border-bottom: 1px solid var(--line); z-index: 1; }
+  input[type=search], select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
+         background: var(--panel); color: var(--text); font: inherit; max-width: 100%; }
+  input[type=search] { flex: 1 1 220px; min-width: 0; }
+  label { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: 14px; }
+  a.btn { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); color: var(--text);
+          text-decoration: none; background: var(--panel); font-size: 14px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; width: 100%; }
+  .pill { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 4px 10px; cursor: pointer; }
+  .pill:has(input:checked) { border-color: var(--accent); color: var(--text); }
+  main { max-width: 1100px; margin: 0 auto; padding: 12px 16px 40px; }
+  .summary { color: var(--muted); font-size: 13px; margin: 4px 0 10px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 10px;
+          padding: 14px 16px; margin-bottom: 10px; }
+  .top { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .company { font-weight: 650; font-size: 16px; }
+  .meta { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+  .chip { background: var(--chip); border-radius: 999px; padding: 2px 10px; font-size: 13px; color: var(--muted); }
+  .chip.good { color: var(--ok); font-weight: 600; } .chip.warn { color: var(--warn); }
+  .chip.role-tag { color: var(--accent); }
+  .contacts { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 14px; }
+  .contacts a { color: var(--accent); text-decoration: none; word-break: break-all; }
+  .contacts a:hover { text-decoration: underline; }
+  .tag { font-size: 11px; color: var(--muted); margin-left: 4px; }
+  details { margin-top: 8px; } summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+  pre { white-space: pre-wrap; word-break: break-word; font: inherit; font-size: 14px; color: var(--muted); margin: 8px 0 0; }
+  .empty { text-align: center; color: var(--muted); padding: 32px 16px; }
+  .src { font-size: 13px; color: var(--muted); white-space: nowrap; }
+  .src a { color: var(--muted); }
+  .new { color: var(--ok); font-weight: 600; }
+  nav.pages { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin-top: 16px; }
+  nav.pages button { min-width: 40px; padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line);
+                     background: var(--panel); color: var(--text); font: inherit; cursor: pointer; }
+  nav.pages button[aria-current="page"] { border-color: var(--accent); color: var(--accent); font-weight: 650; }
+  nav.pages button:disabled { opacity: .45; cursor: default; }
+  nav.pages .gap { padding: 8px 4px; color: var(--muted); }
+</style>
+</head>
+<body>
+<header>
+  <h1>HN Jobs</h1>
+  <div class="stats" id="stats">Loading…</div>
+</header>
+<form id="filters">
+  <input type="search" name="q" placeholder="Search: typescript, postgres, fintech…">
+  <select name="where" aria-label="Where">
+    <option value="ng" selected>Remote · open to Nigeria</option>
+    <option value="remote">Remote · any region</option>
+    <option value="">Any location</option>
+    <option value="onsite">Onsite only</option>
+  </select>
+  <label id="unstatedWrap"><input type="checkbox" name="include_unstated" value="true"> + region not stated</label>
+  <select name="posted" aria-label="Posted">
+    <option value="today">Posted today</option>
+    <option value="7d">Last 7 days</option>
+    <option value="30d">Last 30 days</option>
+    <option value="" selected>Any time</option>
+  </select>
+  <select name="sort" aria-label="Sort">
+    <option value="newest" selected>Newest first</option>
+    <option value="oldest">Oldest first</option>
+  </select>
+  <select name="origin" aria-label="Source">
+    <option value="">All sources</option>
+    <option value="who_is_hiring">Who is hiring</option>
+    <option value="yc_jobs">YC jobs</option>
+  </select>
+  <label><input type="checkbox" name="has_email" value="true"> Has email</label>
+  <label><input type="checkbox" name="has_linkedin" value="true"> Has LinkedIn</label>
+  <a class="btn" id="csv" href="/jobs.csv">Download CSV</a>
+  <div class="tags" role="group" aria-label="Roles">
+    <label class="pill"><input type="checkbox" name="tags" value="founding" checked> Founding</label>
+    <label class="pill"><input type="checkbox" name="tags" value="backend" checked> Backend</label>
+    <label class="pill"><input type="checkbox" name="tags" value="fullstack" checked> Fullstack</label>
+    <label class="pill"><input type="checkbox" name="tags" value="frontend" checked> Frontend</label>
+    <label class="pill"><input type="checkbox" name="tags" value="ai" checked> AI</label>
+    <label class="pill"><input type="checkbox" name="tags" value="software" checked> Other dev</label>
+  </div>
+</form>
+<main>
+  <div class="summary" id="summary"></div>
+  <div id="list"></div>
+  <nav class="pages" id="pages" aria-label="Pagination"></nav>
+</main>
+<script>
+  const PAGE_SIZE = 20;
+  const NIGERIA_FRIENDLY = ['nigeria', 'africa', 'emea'];
+  const REGION_LABEL = { us: 'US', canada: 'Canada', europe: 'Europe/UK', latam: 'LatAm', apac: 'APAC', emea: 'EMEA', africa: 'Africa', nigeria: 'Nigeria' };
+  const form = document.getElementById('filters');
+  const list = document.getElementById('list');
+  const pages = document.getElementById('pages');
+  const summary = document.getElementById('summary');
+  let page = 1, seq = 0;
+
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const safeUrl = (u) => /^https?:\/\//i.test(u) ? u : '#';
+
+  function since(posted) {
+    const d = new Date();
+    if (posted === 'today') { d.setHours(0, 0, 0, 0); return d; }   // viewer's local midnight
+    if (posted === '7d') return new Date(Date.now() - 7 * 864e5);
+    if (posted === '30d') return new Date(Date.now() - 30 * 864e5);
+    return null;
+  }
+
+  function params() {
+    const fd = new FormData(form);
+    const p = new URLSearchParams();
+    for (const k of ['q', 'origin', 'has_email', 'has_linkedin', 'sort']) if (fd.get(k)) p.set(k, fd.get(k));
+    const where = fd.get('where');
+    if (where === 'ng') { p.set('open_to', 'nigeria'); if (fd.get('include_unstated')) p.set('include_unstated', 'true'); }
+    if (where === 'remote') p.set('remote', 'true');
+    if (where === 'onsite') p.set('remote', 'false');
+    const s = since(fd.get('posted'));
+    if (s) p.set('since', s.toISOString());
+    const tags = fd.getAll('tags');
+    if (tags.length) p.set('tags', tags.join(','));   // none ticked = no role filter
+    return p;
+  }
+
+  function when(iso) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const days = Math.floor((new Date().setHours(0, 0, 0, 0) - new Date(iso).setHours(0, 0, 0, 0)) / 864e5);
+    const date = d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    if (days <= 0) return `<span class="new">Today</span> · ${d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })}`;
+    if (days === 1) return `Yesterday · ${date}`;
+    return `${date} · ${days}d ago`;
+  }
+
+  function remoteChip(j) {
+    if (j.remote === false) return '<span class="chip warn">Onsite</span>';
+    if (j.remote !== true) return '';
+    if (j.remote_scope === 'worldwide') return '<span class="chip good">Remote · Worldwide</span>';
+    const regions = j.remote_regions || [];
+    if (regions.some((r) => NIGERIA_FRIENDLY.includes(r))) return `<span class="chip good">Remote · ${esc(regions.map((r) => REGION_LABEL[r] || r).join(', '))}</span>`;
+    if (j.remote_scope === 'regional') return `<span class="chip warn">Remote · ${esc(regions.map((r) => REGION_LABEL[r] || r).join(', '))} only</span>`;
+    return '<span class="chip">Remote · region not stated</span>';
+  }
+
+  function card(j) {
+    const chips = [remoteChip(j)];
+    if (j.location) chips.push(`<span class="chip">${esc(j.location)}</span>`);
+    if (j.salary) chips.push(`<span class="chip">${esc(j.salary)}</span>`);
+    if (j.yc_batch) chips.push(`<span class="chip">YC ${esc(j.yc_batch)}</span>`);
+    for (const t of (j.role_tags || []).filter((t) => t !== 'software')) chips.push(`<span class="chip role-tag">${esc(t)}</span>`);
+    const contacts = [
+      ...j.emails.map((e) => `<span><a href="mailto:${esc(e.address)}">${esc(e.address)}</a><span class="tag">${esc(e.kind)}${e.origin === 'author_profile' ? ' · from profile' : ''}</span></span>`),
+      ...j.linkedin_urls.map((u) => `<a href="${esc(safeUrl(u))}" target="_blank" rel="noopener">LinkedIn: ${esc(u.replace(/^https:\/\/www\.linkedin\.com\//, ''))}</a>`),
+      ...j.links.slice(0, 3).map((u) => `<a href="${esc(safeUrl(u))}" target="_blank" rel="noopener">${esc(u.replace(/^https?:\/\//, '').slice(0, 60))}</a>`),
+    ];
+    return `<article class="card">
+      <div class="top">
+        <div><span class="company">${esc(j.company || j.title || 'Unknown company')}</span>
+          ${j.role ? `<span> — ${esc(j.role)}</span>` : ''}</div>
+        <div class="src">${when(j.published_at)} · ${j.hn_url ? `<a href="${esc(j.hn_url)}" target="_blank" rel="noopener">view on HN</a>` : esc(j.source)}</div>
+      </div>
+      <div class="meta">${chips.filter(Boolean).join('')}</div>
+      ${contacts.length ? `<div class="contacts">${contacts.join('')}</div>` : ''}
+      ${j.body ? `<details><summary>Full post</summary><pre>${esc(j.body)}</pre></details>` : ''}
+    </article>`;
+  }
+
+  function pageButtons(current, total) {
+    if (total <= 1) return '';
+    const nums = new Set([1, total, current - 1, current, current + 1].filter((n) => n >= 1 && n <= total));
+    const sorted = [...nums].sort((a, b) => a - b);
+    let html = `<button type="button" data-page="${current - 1}" ${current === 1 ? 'disabled' : ''}>‹ Prev</button>`;
+    sorted.forEach((n, i) => {
+      if (i && n - sorted[i - 1] > 1) html += '<span class="gap">…</span>';
+      html += `<button type="button" data-page="${n}" ${n === current ? 'aria-current="page"' : ''}>${n}</button>`;
+    });
+    return html + `<button type="button" data-page="${current + 1}" ${current === total ? 'disabled' : ''}>Next ›</button>`;
+  }
+
+  async function load() {
+    const my = ++seq;
+    const p = params();
+    document.getElementById('csv').href = '/jobs.csv?' + p;
+    p.set('page', page);
+    p.set('limit', PAGE_SIZE);
+    summary.textContent = 'Loading…';
+    const res = await fetch('/jobs?' + p);
+    const data = await res.json();
+    if (my !== seq) return;
+    if (!res.ok) { summary.textContent = data.message || 'Error'; list.innerHTML = ''; pages.innerHTML = ''; return; }
+    if (!data.items.length && page > 1) { page = 1; return load(); }
+    const from = (data.page - 1) * data.pageSize + 1;
+    summary.textContent = data.total
+      ? `Showing ${from}–${from + data.items.length - 1} of ${data.total} jobs · page ${data.page} of ${data.pages}`
+      : '';
+    list.innerHTML = data.items.length
+      ? data.items.map(card).join('')
+      : `<div class="empty">No jobs match these filters.${form.posted.value === 'today' ? ' Try “Last 7 days”.' : ''}</div>`;
+    pages.innerHTML = pageButtons(data.page, data.pages);
+  }
+
+  pages.addEventListener('click', (e) => {
+    const b = e.target.closest('button[data-page]');
+    if (!b || b.disabled) return;
+    page = Number(b.dataset.page);
+    load().then(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+  });
+
+  function syncUnstated() {
+    document.getElementById('unstatedWrap').style.display = form.where.value === 'ng' ? '' : 'none';
+  }
+  let t;
+  form.addEventListener('input', () => { syncUnstated(); page = 1; clearTimeout(t); t = setTimeout(load, 250); });
+  form.addEventListener('submit', (e) => { e.preventDefault(); page = 1; load(); });
+
+  fetch('/stats').then((r) => r.json()).then(({ store: s }) => {
+    document.getElementById('stats').textContent =
+      `${s.jobs} jobs collected · ${s.dev_jobs} dev roles · ${s.jobs_with_email} with email · ${s.jobs_with_linkedin} with LinkedIn`;
+  }).catch(() => {});
+  syncUnstated();
+  load();
+</script>
+</body>
+</html>
