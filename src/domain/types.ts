@@ -61,6 +61,7 @@ export interface JobDetails {
   roleTags: string[];
   remoteScope: string | null;
   remoteRegions: string[];
+  visaSponsorship: boolean | null;
 }
 
 export interface NormalizedItem {

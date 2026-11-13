@@ -85,6 +85,8 @@ Contacts:
 
 **Remote eligibility.** On HN, "Remote" very often means "remote within the US". Each remote job gets a `remote_scope` (`worldwide`, `regional`, `unstated`) and `remote_regions` (us, europe, emea, africa, latam, apac…). Only the location field, the header line and text around the word "remote" are read, and "US" is matched case-sensitively so "contact us" doesn't count. `GET /jobs?open_to=nigeria` returns jobs open worldwide or to Africa/EMEA; add `include_unstated=true` for remote posts that don't say where.
 
+**Visa sponsorship.** `visa_sponsorship` is `true`, `false` or `NULL` (not mentioned). It understands phrasing like "Visa sponsorship", "VISA + relocation", "we can sponsor a UK Skilled Worker visa", and refusals like "no visa sponsorship" or "without sponsorship". Refusals are checked first, so a "no" never reads as a yes. Add `include_visa=true` to `open_to=nigeria` to include onsite jobs you could relocate for.
+
 **Replay without re-fetching.** After improving a parser, `npm run reprocess` re-derives every job posting from the raw payloads already in Postgres. Author-profile contacts come from the `authors` cache, so nothing is lost.
 
 The parser prefers `NULL` to a wrong guess. On a real thread, it fills company for ~95% of posts, location ~92%, role ~73% (many posts don't name a role in the header), and finds an email in ~40%.

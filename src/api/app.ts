@@ -157,6 +157,7 @@ export function buildApp(deps: AppDeps) {
       .optional(),
     open_to: z.enum(['nigeria']).optional(),
     include_unstated: boolParam.optional(),
+    include_visa: boolParam.optional(),
     /** ISO date/time; the UI sends the viewer's local midnight for "today". */
     since: z.coerce.date().optional(),
     sort: z.enum(['newest', 'oldest']).default('newest'),
@@ -170,6 +171,7 @@ export function buildApp(deps: AppDeps) {
     hasLinkedin: q.has_linkedin,
     openTo: q.open_to,
     includeUnstated: q.include_unstated,
+    includeVisa: q.include_visa,
   });
 
   app.get('/jobs', async (req) => {
@@ -182,7 +184,7 @@ export function buildApp(deps: AppDeps) {
   app.get('/jobs.csv', async (req, reply) => {
     const q = parse(JobQuery.omit({ limit: true, page: true }), req.query);
     const { items: rows } = await searchJobs(pool, { ...toFilter(q), limit: 5000 });
-    const cols = ['hn_url', 'company', 'role', 'role_tags', 'location', 'remote', 'remote_scope', 'remote_regions', 'salary', 'yc_batch', 'emails', 'linkedin_urls', 'links', 'author', 'published_at'];
+    const cols = ['hn_url', 'company', 'role', 'role_tags', 'location', 'remote', 'remote_scope', 'remote_regions', 'visa_sponsorship', 'salary', 'yc_batch', 'emails', 'linkedin_urls', 'links', 'author', 'published_at'];
     const cell = (v: unknown): string => {
       const s =
         v == null ? ''

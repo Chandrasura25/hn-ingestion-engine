@@ -101,19 +101,20 @@ export async function upsertJobPosting(c: PoolClient, postId: string, job: JobDe
   await c.query(
     `INSERT INTO job_postings (post_id, origin, company, role, location, remote, salary, yc_batch,
                                emails, linkedin_urls, links, role_tags, remote_scope,
-                               remote_regions, updated_at)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14, now())
+                               remote_regions, visa_sponsorship, updated_at)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15, now())
      ON CONFLICT (post_id) DO UPDATE SET
        origin = EXCLUDED.origin, company = EXCLUDED.company, role = EXCLUDED.role,
        location = EXCLUDED.location, remote = EXCLUDED.remote, salary = EXCLUDED.salary,
        yc_batch = EXCLUDED.yc_batch, emails = EXCLUDED.emails,
        linkedin_urls = EXCLUDED.linkedin_urls, links = EXCLUDED.links,
        role_tags = EXCLUDED.role_tags, remote_scope = EXCLUDED.remote_scope,
-       remote_regions = EXCLUDED.remote_regions, updated_at = now()`,
+       remote_regions = EXCLUDED.remote_regions,
+       visa_sponsorship = EXCLUDED.visa_sponsorship, updated_at = now()`,
     [
       postId, job.origin, job.company, job.role, job.location, job.remote, job.salary, job.ycBatch,
       JSON.stringify(job.emails), job.linkedinUrls, job.links, job.roleTags,
-      job.remoteScope, job.remoteRegions,
+      job.remoteScope, job.remoteRegions, job.visaSponsorship,
     ],
   );
 }

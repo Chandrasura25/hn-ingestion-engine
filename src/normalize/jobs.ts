@@ -2,6 +2,7 @@ import type { JobDetails, JobOrigin } from '../domain/types.js';
 import { extractEmails, extractLinkedIn, extractUrls } from './contacts.js';
 import { classifyRoles } from './roles.js';
 import { classifyRemote } from './remote.js';
+import { detectVisaSponsorship } from './visa.js';
 
 export interface JobHeader {
   company: string | null;
@@ -113,6 +114,7 @@ export function buildJobDetails(
     remote,
     remoteScope: eligibility.scope,
     remoteRegions: eligibility.regions,
+    visaSponsorship: detectVisaSponsorship(text),
     emails: extractEmails(text).map((e) => ({ ...e, origin: 'post' as const })),
     linkedinUrls: extractLinkedIn(text),
     links: [...links],

@@ -25,6 +25,7 @@
   input[type=search], select { padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px;
          background: var(--panel); color: var(--text); font: inherit; max-width: 100%; }
   input[type=search] { flex: 1 1 220px; min-width: 0; }
+  #ngExtras { display: inline-flex; flex-wrap: wrap; gap: 4px 12px; }
   label { display: inline-flex; gap: 6px; align-items: center; color: var(--muted); font-size: 14px; }
   a.btn { padding: 8px 12px; border-radius: 8px; border: 1px solid var(--line); color: var(--text);
           text-decoration: none; background: var(--panel); font-size: 14px; }
@@ -72,7 +73,10 @@
     <option value="">Any location</option>
     <option value="onsite">Onsite only</option>
   </select>
-  <label id="unstatedWrap"><input type="checkbox" name="include_unstated" value="true"> + region not stated</label>
+  <span id="ngExtras">
+    <label><input type="checkbox" name="include_visa" value="true" checked> + visa sponsorship</label>
+    <label><input type="checkbox" name="include_unstated" value="true"> + region not stated</label>
+  </span>
   <select name="posted" aria-label="Posted">
     <option value="today">Posted today</option>
     <option value="7d">Last 7 days</option>
@@ -131,7 +135,11 @@
     const p = new URLSearchParams();
     for (const k of ['q', 'origin', 'has_email', 'has_linkedin', 'sort']) if (fd.get(k)) p.set(k, fd.get(k));
     const where = fd.get('where');
-    if (where === 'ng') { p.set('open_to', 'nigeria'); if (fd.get('include_unstated')) p.set('include_unstated', 'true'); }
+    if (where === 'ng') {
+      p.set('open_to', 'nigeria');
+      if (fd.get('include_unstated')) p.set('include_unstated', 'true');
+      if (fd.get('include_visa')) p.set('include_visa', 'true');
+    }
     if (where === 'remote') p.set('remote', 'true');
     if (where === 'onsite') p.set('remote', 'false');
     const s = since(fd.get('posted'));
@@ -163,6 +171,8 @@
 
   function card(j) {
     const chips = [remoteChip(j)];
+    if (j.visa_sponsorship === true) chips.push('<span class="chip good">✈ Visa sponsorship</span>');
+    if (j.visa_sponsorship === false) chips.push('<span class="chip warn">No visa sponsorship</span>');
     if (j.location) chips.push(`<span class="chip">${esc(j.location)}</span>`);
     if (j.salary) chips.push(`<span class="chip">${esc(j.salary)}</span>`);
     if (j.yc_batch) chips.push(`<span class="chip">YC ${esc(j.yc_batch)}</span>`);
@@ -226,7 +236,7 @@
   });
 
   function syncUnstated() {
-    document.getElementById('unstatedWrap').style.display = form.where.value === 'ng' ? '' : 'none';
+    document.getElementById('ngExtras').style.display = form.where.value === 'ng' ? '' : 'none';
   }
   let t;
   form.addEventListener('input', () => { syncUnstated(); page = 1; clearTimeout(t); t = setTimeout(load, 250); });
@@ -234,7 +244,7 @@
 
   fetch('/stats').then((r) => r.json()).then(({ store: s }) => {
     document.getElementById('stats').textContent =
-      `${s.jobs} jobs collected · ${s.dev_jobs} dev roles · ${s.jobs_with_email} with email · ${s.jobs_with_linkedin} with LinkedIn`;
+      `${s.jobs} jobs collected · ${s.dev_jobs} dev roles · ${s.jobs_with_visa} sponsor visas ·${s.jobs_with_email} with email · ${s.jobs_with_linkedin} with LinkedIn`;
   }).catch(() => {});
   syncUnstated();
   load();

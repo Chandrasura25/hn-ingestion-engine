@@ -54,6 +54,8 @@ export interface JobFilter {
   openTo?: 'nigeria';
   /** With openTo: also include remote jobs that don't say where (worth checking manually). */
   includeUnstated?: boolean;
+  /** With openTo: also include onsite/hybrid jobs that sponsor visas (relocation). */
+  includeVisa?: boolean;
   since?: Date;
   sort?: 'newest' | 'oldest';
   page?: number;
@@ -69,7 +71,7 @@ export async function searchJobs(pool: Pool, f: JobFilter) {
     `SELECT p.id, p.source, p.external_id, p.title, left(p.body, 1500) AS body, p.url, p.author,
             p.published_at, j.origin, j.company, j.role, j.location, j.remote, j.salary,
             j.yc_batch, j.emails, j.linkedin_urls, j.links, j.role_tags, j.remote_scope,
-            j.remote_regions, count(*) OVER () AS total_count,
+            j.remote_regions, j.visa_sponsorship, count(*) OVER () AS total_count,
             CASE WHEN p.source = 'hackernews'
                  THEN 'https://news.ycombinator.com/item?id=' || p.external_id END AS hn_url
        FROM job_postings j JOIN posts p ON p.id = j.post_id
@@ -81,17 +83,19 @@ export async function searchJobs(pool: Pool, f: JobFilter) {
         AND ($5::text IS NULL OR j.origin = $5)
         AND ($6::timestamptz IS NULL OR p.published_at >= $6)
         AND ($8::text[] IS NULL OR j.role_tags && $8)
-        AND ($9::text[] IS NULL OR (j.remote AND (
-              j.remote_scope = 'worldwide'
-              OR j.remote_regions && $9
-              OR ($10::boolean AND j.remote_scope = 'unstated'))))
+        AND ($9::text[] IS NULL
+             OR (j.remote AND (
+                  j.remote_scope = 'worldwide'
+                  OR j.remote_regions && $9
+                  OR ($10::boolean AND j.remote_scope = 'unstated')))
+             OR ($12::boolean AND j.visa_sponsorship IS TRUE))
       ORDER BY ${f.sort === 'oldest' ? 'p.published_at ASC NULLS LAST, p.id ASC' : 'p.published_at DESC NULLS LAST, p.id DESC'}
       LIMIT $7 OFFSET $11`,
     [
       f.q ?? null, f.remote ?? null, f.hasEmail ?? null, f.hasLinkedin ?? null, f.origin ?? null,
       f.since ?? null, f.limit, f.tags?.length ? f.tags : null,
       f.openTo ? OPEN_TO_REGIONS[f.openTo] : null, f.includeUnstated ?? false,
-      ((f.page ?? 1) - 1) * f.limit,
+      ((f.page ?? 1) - 1) * f.limit, f.includeVisa ?? false,
     ],
   );
   const total = rows[0] ? Number(rows[0].total_count) : 0;
@@ -119,6 +123,7 @@ export async function stats(pool: Pool) {
        (SELECT count(*) FROM job_postings WHERE cardinality(linkedin_urls) > 0)::int  AS jobs_with_linkedin,
        (SELECT count(*) FROM job_postings
          WHERE role_tags && '{founding,backend,fullstack,frontend,ai,software}')::int AS dev_jobs,
+       (SELECT count(*) FROM job_postings WHERE visa_sponsorship IS TRUE)::int AS jobs_with_visa,
        (SELECT count(*) FROM posts WHERE cardinality(quality_issues) > 0)::int AS posts_with_quality_issues,
        (SELECT count(*) FROM ingestion_failures WHERE resolved_at IS NULL)::int AS open_failures`,
   );
